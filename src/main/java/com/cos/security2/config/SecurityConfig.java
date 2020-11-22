@@ -1,7 +1,9 @@
 package com.cos.security2.config;
 
+import com.cos.security2.config.jwt.JwtAuthorizationFilter;
 import com.cos.security2.filter.MyFilter3;
-import com.cos.security2.jwt.JwtAuthenticationFilter;
+import com.cos.security2.config.jwt.JwtAuthenticationFilter;
+import com.cos.security2.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +22,7 @@ import org.springframework.web.filter.CorsFilter;
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final CorsFilter corsFilter;
+    private final UserRepository userRepository;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -28,7 +31,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.addFilterBefore(new MyFilter3(), SecurityContextPersistenceFilter.class); // 시큐리티가 동작하기 전에 MyFilter3이 동작
+//        http.addFilterBefore(new MyFilter3(), SecurityContextPersistenceFilter.class); // 시큐리티가 동작하기 전에 MyFilter3이 동작
         http.csrf().disable();
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
@@ -36,6 +39,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .formLogin().disable() // form 로그인 비활성화
                 .httpBasic().disable() // 기존 인증 방식 비활성화
                 .addFilter(new JwtAuthenticationFilter(authenticationManager())) // AuthenticationManager
+                .addFilter(new JwtAuthorizationFilter(authenticationManager(), userRepository)) // AuthenticationManager
                 .authorizeRequests()
                 .antMatchers("/api/v1/user/**")
                 .access("hasRole('ROLE_USER') or hasRole('ROLE_MANAGER') or hasRole('ROLE_ADMIN')")

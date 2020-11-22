@@ -1,6 +1,8 @@
-package com.cos.security2.jwt;
+package com.cos.security2.config.jwt;
 
-import com.cos.security2.auth.PrincipalDetails;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.cos.security2.config.auth.PrincipalDetails;
 import com.cos.security2.model.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +16,8 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.Date;
 
 // 스프링 시큐리티에서 UsernamePasswordAuthenticationFilter 가 있음
 // 원래라면 /login 요청해서 username, password 전송하면 (POST)
@@ -70,6 +72,22 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
         System.out.println("successfulAuthentication 실행됨 : 인증이 완료 되었다는 뜻");
-        super.successfulAuthentication(request, response, chain, authResult);
+        PrincipalDetails principalDetails = (PrincipalDetails) authResult.getPrincipal();
+        
+        // Hash 암호화 방식
+        String jwtToken = JWT.create()
+                .withSubject(principalDetails.getUsername())
+                .withExpiresAt(new Date(System.currentTimeMillis() + JwtProperties.EXPIRATION_TIME))
+                .withClaim("id", principalDetails.getUser().getId())
+                .withClaim("email", principalDetails.getUser().getEmail())
+                .sign(Algorithm.HMAC512(JwtProperties.SECRET));
+
+        response.addHeader(JwtProperties.HEADER_STRING, JwtProperties.TOKEN_PREFIX + jwtToken);
     }
 }
+
+// 이메일, 패스워드 로그인 정상
+// JWT 토큰을 생성
+// 클라이언트쪽으로 JWT 토큰을 응답
+// 요청할 때 마다 JWT 토큰을 가지고 요청
+// 서버는 JWT 토큰이 유효한지를 판단 (이를 위한 필터를 만들어야 함)
